@@ -1,0 +1,153 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import base64
+
+# ------------------------------
+# Base64 placeholder images
+placeholder_img_data = """
+iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABH0lEQVQ4T+2TzUoDQRCFv7v0QCVS
+EVrY2dlYWv4HKiI7yCgoi6BQiEJotgITsLByGomIj8B9FtrAQwIuQeOHe/eU94PxLZAPkNkgSP4n
+q56J8HyE3GcFJb7W7gCKIYkZsJqC2DPK8qMQm8+VyeoOuv7EvSCaZkWfwCuS7+PZ+AVP4EvsDFLs
+AHTgMXNwHCDS7Fe5E0L0+fABv7g8MDXX4C5kchf4L34f6S4E7jV+qXKgD6CrT0+gCPUR0AIbSl1g
++CNZzXqA4+6S1wK23NnAbh9YDC3Z+8wlxndkC9xxVyz8CgTsi+adkKr6I+tnwBjaZTZclPAvZgG1
+NvggHjDcLkdtFsAAAAASUVORK5CYII=
+"""
+
+def load_image(data):
+    return tk.PhotoImage(data=base64.b64decode(data))
+
+# ------------------------------
+# Menu data with embedded images
+foods = {
+    "Burger": {"price": 120, "image": load_image(placeholder_img_data)},
+    "Pizza": {"price": 250, "image": load_image(placeholder_img_data)},
+    "Pasta": {"price": 180, "image": load_image(placeholder_img_data)}
+}
+
+drinks = {
+    "Coke": {"price": 50, "image": load_image(placeholder_img_data)},
+    "Juice": {"price": 60, "image": load_image(placeholder_img_data)},
+    "Water": {"price": 30, "image": load_image(placeholder_img_data)}
+}
+
+addons = {
+    "Extra Cheese": {"price": 30, "image": load_image(placeholder_img_data)},
+    "Fries": {"price": 50, "image": load_image(placeholder_img_data)},
+    "Sauce": {"price": 20, "image": load_image(placeholder_img_data)}
+}
+
+cart = {}
+
+# ------------------------------
+# Functions
+def add_item(item, price):
+    if item in cart:
+        cart[item]["quantity"] += 1
+    else:
+        cart[item] = {"price": price, "quantity": 1}
+    update_cart()
+
+def remove_item(item):
+    if item in cart:
+        cart[item]["quantity"] -= 1
+        if cart[item]["quantity"] <= 0:
+            del cart[item]
+    update_cart()
+
+def update_cart():
+    cart_text.config(state="normal")
+    cart_text.delete(1.0, tk.END)
+    total = 0
+    for item, data in cart.items():
+        subtotal = data["price"] * data["quantity"]
+        cart_text.insert(tk.END, f"{item} x {data['quantity']} = ₱{subtotal}\n")
+        total += subtotal
+    cart_text.insert(tk.END, f"\nTotal: ₱{total}")
+    cart_text.config(state="disabled")
+
+def checkout():
+    if cart:
+        total = sum(data["price"] * data["quantity"] for data in cart.values())
+        messagebox.showinfo("Checkout", f"Total amount: ₱{total}\nThank you for ordering!")
+        cart.clear()
+        update_cart()
+    else:
+        messagebox.showwarning("Cart Empty", "Your cart is empty!")
+
+# ------------------------------
+# GUI setup
+root = tk.Tk()
+root.title("Food Ordering App")
+root.geometry("900x600")
+root.configure(bg="lightblue")
+
+# ------------------------------
+# Wallpaper (optional)
+wallpaper_img = load_image(placeholder_img_data)
+bg_label = tk.Label(root, image=wallpaper_img)
+bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+
+# ------------------------------
+# Cart frame (right)
+cart_frame = tk.Frame(root, bg="#e0e0e0", bd=2, relief="solid")
+cart_frame.place(x=590, y=20, width=300, height=550)
+
+tk.Label(cart_frame, text="Cart", font=("Arial", 14, "bold"), bg="#e0e0e0").pack(pady=5)
+cart_text = tk.Text(cart_frame, width=35, height=25, state="disabled")
+cart_text.pack(padx=5, pady=5)
+tk.Button(cart_frame, text="Checkout", bg="green", fg="white", font=("Arial", 12, "bold"),
+          command=checkout).pack(pady=5)
+
+# ------------------------------
+# Menu frame (left)
+menu_frame = tk.Frame(root, bg="#ffffff", bd=2, relief="solid")
+menu_frame.place(x=20, y=20, width=550, height=550)
+
+notebook = ttk.Notebook(menu_frame)
+notebook.pack(fill="both", expand=True)
+
+# ------------------------------
+def create_scrollable_tab(notebook, title):
+    tab = tk.Frame(notebook)
+    notebook.add(tab, text=title)
+
+    canvas = tk.Canvas(tab, bg="#ffffff")
+    scrollbar = tk.Scrollbar(tab, orient="vertical", command=canvas.yview)
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    scrollable_frame = tk.Frame(canvas, bg="#ffffff")
+    canvas.create_window((0,0), window=scrollable_frame, anchor="nw")
+
+    def on_configure(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+    scrollable_frame.bind("<Configure>", on_configure)
+
+    return scrollable_frame
+
+# ------------------------------
+def add_items_to_tab(tab_frame, menu_dict):
+    for item, data in menu_dict.items():
+        item_frame = tk.Frame(tab_frame, bg="#ffffff", bd=1, relief="ridge")
+        item_frame.pack(pady=5, padx=5, fill="x")
+        tk.Label(item_frame, image=data["image"], bg="#ffffff").pack(side="left")
+        info_frame = tk.Frame(item_frame, bg="#ffffff")
+        info_frame.pack(side="left", padx=10)
+        tk.Label(info_frame, text=f"{item}\n₱{data['price']}", bg="#ffffff", font=("Arial", 12, "bold")).pack()
+        btn_frame = tk.Frame(info_frame, bg="#ffffff")
+        btn_frame.pack(pady=5)
+        tk.Button(btn_frame, text="+", width=3, command=lambda i=item, p=data["price"]: add_item(i,p)).pack(side="left", padx=2)
+        tk.Button(btn_frame, text="-", width=3, command=lambda i=item: remove_item(i)).pack(side="left", padx=2)
+
+# ------------------------------
+food_tab = create_scrollable_tab(notebook, "Foods")
+drink_tab = create_scrollable_tab(notebook, "Drinks")
+addon_tab = create_scrollable_tab(notebook, "Add-ons")
+
+add_items_to_tab(food_tab, foods)
+add_items_to_tab(drink_tab, drinks)
+add_items_to_tab(addon_tab, addons)
+
+root.mainloop()
